@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#234f93">
 <title>Neon Blitz Tactics — Online</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div id="gameRoot">
@@ -239,6 +239,8 @@
                 <input id="joinCode" type="text" maxlength="4" placeholder="CODE" oninput="this.value=this.value.toUpperCase()" style="flex:1; min-width:0; padding:10px 6px; background:#0a1c38; border:2px solid #46d3ff; border-radius:10px; color:#46d3ff; font-size:18px; font-weight:900; letter-spacing:3px; text-align:center; box-sizing:border-box; outline:none;">
                 <button class="btn" style="padding:10px 14px; background:linear-gradient(180deg,#46d3ff,#1d95c5) !important; border-bottom-color:#125f80 !important; color:#04222e !important;" onclick="onlineJoin()">JOIN</button>
             </div>
+            <div style="width:85%; height:2px; background:linear-gradient(90deg,transparent,#ffcb2e,transparent); opacity:0.5; margin:16px 0 12px;"></div>
+            <button class="btn" style="width:85%; background:linear-gradient(180deg,#b06be0,#7a3aa8) !important; border-bottom-color:#4a1c6e !important; color:#fff !important;" onclick="openInvite()">📲 INVITE FRIENDS</button>
         </div>
 
         <!-- Party code display (shown to the creator while waiting) -->
@@ -252,8 +254,23 @@
     </div>
 </div>
 
+<div id="inviteOverlay" class="overlayModal" style="z-index:150;">
+    <div class="modalBox" style="max-width:330px; align-items:center;">
+        <button class="closeBtn" onclick="closeInvite()">×</button>
+        <div class="menuHeader" style="margin-top:0;">Invite</div>
+        <div style="font-size:12px; color:#bcd4f5; text-align:center; margin-bottom:12px;">Point a phone camera at the code, or send the link. They just open it — no setup.</div>
+        <div style="background:#fff; padding:10px; border-radius:14px; margin-bottom:12px;"><img id="inviteQR" alt="QR code" width="200" height="200" style="display:block;"></div>
+        <div id="inviteUrl" style="font-size:12px; color:#46d3ff; word-break:break-all; text-align:center; background:#0a1c38; border:1px solid #2a4d82; border-radius:8px; padding:8px; width:90%; box-sizing:border-box; margin-bottom:12px;">…</div>
+        <div style="display:flex; gap:8px; width:90%;">
+            <button class="btn" style="flex:1;" onclick="copyInvite()">COPY LINK</button>
+            <button class="btn" style="flex:1; background:linear-gradient(180deg,#5bd04a,#2f9c25) !important; border-bottom-color:#1d6b16 !important; color:#06330a !important;" onclick="shareInvite()">SHARE</button>
+        </div>
+        <div id="inviteMsg" style="font-size:11px; color:#2ecc71; margin-top:10px; min-height:14px;"></div>
+    </div>
 </div>
-<script src="game.js?v=4"></script>
-<script src="net.js?v=4"></script>
+
+</div>
+<script src="game.js?v=7"></script>
+<script src="net.js?v=7"></script>
 </body>
 </html>

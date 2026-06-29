@@ -17,7 +17,12 @@ const cardDatabase = {
     naruto: { cost: 4, hp: 900, dmg: 100, range: 25, spd: 1.5, atkSpd: 50, target: 'any', targetsAir: false, name: "Ninja Dash", icon: '🦊', count: 1, arena: 2, evoCyclesReq: 2, desc: 'Insanely high speed melee rusher.' },
     martian:{ cost: 4, hp: 1200, dmg: 80, range: 90, spd: 0.5, atkSpd: 80, target: 'any', targetsAir: true, name: "Martian", icon: '👽', count: 1, arena: 2, trait: 'flying', evoCyclesReq: 2, desc: 'Flying bulk ranged psychic tank.' },
     nobu:   { cost: 5, hp: 800, dmg: 70, range: 110, spd: 0.5, atkSpd: 90, target: 'any', targetsAir: true, name: "The Hand", icon: '👺', count: 1, arena: 2, trait: 'summoner', evoCyclesReq: 2, desc: 'Summons assassins periodically to defend.' },
-    indy:   { cost: 3, hp: 1000, dmg: 80, range: 30, spd: 0.7, atkSpd: 80, target: 'any', targetsAir: false, name: "Dr. Jones", icon: '🤠', count: 1, arena: 2, trait: 'miner', evoCyclesReq: 2, desc: 'Digs tunnel to pop up anywhere.' }
+    indy:   { cost: 3, hp: 1000, dmg: 80, range: 30, spd: 0.7, atkSpd: 80, target: 'any', targetsAir: false, name: "Dr. Jones", icon: '🤠', count: 1, arena: 2, trait: 'miner', evoCyclesReq: 2, desc: 'Digs tunnel to pop up anywhere.' },
+    golem:  { cost: 6, hp: 4200, dmg: 190, range: 38, spd: 0.32, atkSpd: 120, target: 'any', targetsAir: false, name: "Gamma Brute", icon: '👊', count: 1, arena: 3, evoCyclesReq: 2, desc: 'Furious green tank. Smashes everything in melee.' },
+    drake:  { cost: 5, hp: 1300, dmg: 130, range: 95, spd: 0.6, atkSpd: 85, target: 'any', targetsAir: true, name: "Blast Hero", icon: '💥', count: 1, arena: 3, trait: 'flying', evoCyclesReq: 2, desc: 'Rockets around on explosions. Hits air and ground.' },
+    sniper: { cost: 4, hp: 460, dmg: 330, range: 185, spd: 0.5, atkSpd: 210, target: 'any', targetsAir: true, name: "The Jester", icon: '🃏', count: 1, arena: 3, evoCyclesReq: 2, desc: 'Hurls explosive cards from way across the map.' },
+    medic:  { cost: 3, hp: 700, dmg: 30, range: 55, spd: 0.55, atkSpd: 100, target: 'any', targetsAir: false, name: "Care Bot", icon: '🤍', count: 1, arena: 3, trait: 'healer', evoCyclesReq: 2, desc: 'Soft healthcare robot. Mends nearby allies.' },
+    drones: { cost: 4, hp: 170, dmg: 65, range: 50, spd: 0.85, atkSpd: 60, target: 'any', targetsAir: false, name: "Toy Troopers", icon: '🪖', count: 4, arena: 3, evoCyclesReq: 2, desc: 'Four little plastic soldiers with rifles.' }
 };
 
 const STRAT_TIPS = {
@@ -87,6 +92,31 @@ const STRAT_TIPS = {
         evo1: "EVO TIER 1: surfaces with brief invulnerability and a stun.",
         evo2: "EVO TIER 2: a whip-pull that drags a back-line troop into the open."
     },
+    golem: {
+        base: "The Gamma Brute is an unstoppable green wall of muscle that pounds anything in melee. Lead your push with him and stack squishy damage behind his huge health bar.",
+        evo1: "EVO TIER 1: angrier and tankier — the madder he gets, the harder he hits.",
+        evo2: "EVO TIER 2: a Thunder Clap ability that shockwaves and stuns everything around him."
+    },
+    drake: {
+        base: "The Blast Hero rockets around on explosions, ignoring the river and hitting air and ground. Aggressive and mobile — dive an exposed lane or chase down support.",
+        evo1: "EVO TIER 1: bigger blasts and a faster fuse.",
+        evo2: "EVO TIER 2: a Howitzer ability that drops a massive explosion on a clustered group."
+    },
+    sniper: {
+        base: "The Jester flings explosive cards from clear across the map and hits like a truck — but he's paper-thin. Hide him far behind your tank and let him pick off key targets.",
+        evo1: "EVO TIER 1: even longer reach and a faster draw.",
+        evo2: "EVO TIER 2: a Royal Flush ability — an instant high-damage card straight to the nearest threat."
+    },
+    medic: {
+        base: "The Care Bot is a soft healthcare robot that pulses healing to nearby allies. Tuck it behind a big push so your tank and troops outlast everything the enemy throws.",
+        evo1: "EVO TIER 1: heals more, more often.",
+        evo2: "EVO TIER 2: a Mass Heal ability that instantly tops up your whole army."
+    },
+    drones: {
+        base: "Toy Troopers deploy as four little plastic soldiers with rifles — a cheap swarm that shreds a lone tank or chips an open tower. Keep them clear of splash damage.",
+        evo1: "EVO TIER 1: tougher plastic — they take an extra hit each.",
+        evo2: "EVO TIER 2: a Reinforce ability that drops two more troopers into the squad."
+    },
     generic: {
         base: "Experiment with placements and timings to master this hero's tactical advantage.",
         evo1: "Evo data encrypted. Discover in future sectors.",
@@ -104,7 +134,10 @@ const TROPHY_ROAD = [
     { id: 't_200', type: 'reward', req: 200, title: 'Bat-Tech',    desc: '20 Batman Cards', icon: '🦇', rType: 'card', rId: 'batman', rAmt: 20 },
     { id: 't_400', type: 'arena',  req: 400, title: 'Cyber Slums', desc: 'Arena 2 (Unlocks New Cards!)' },
     { id: 't_500', type: 'reward', req: 500, title: 'Relic Hunter',desc: '30 Dr. Jones Cards', icon: '🤠', rType: 'card', rId: 'indy', rAmt: 30 },
-    { id: 't_600', type: 'reward', req: 600, title: 'Gem Stash',   desc: '+5 Gems', icon: '💎', rType: 'gem', rAmt: 5 }
+    { id: 't_600', type: 'reward', req: 600, title: 'Gem Stash',   desc: '+5 Gems', icon: '💎', rType: 'gem', rAmt: 5 },
+    { id: 't_1000', type: 'arena',  req: 1000, title: 'Quantum Spire', desc: 'Arena 3 (Unlocks 5 New Heroes!)' },
+    { id: 't_1150', type: 'reward', req: 1150, title: 'Gamma Core',  desc: '25 Gamma Brute Cards', icon: '👊', rType: 'card', rId: 'golem', rAmt: 25 },
+    { id: 't_1350', type: 'reward', req: 1350, title: 'Hero Crate',  desc: '+15 Gems', icon: '💥', rType: 'gem', rAmt: 15 }
 ];
 
 const SafeStorage = {
@@ -167,7 +200,7 @@ window.factoryResetAccount = function() {
 };
 
 function saveData() { SafeStorage.set(SAVE_KEY, JSON.stringify(pData)); updateTopResources(); }
-function getArenaLevel() { return pData.trophies >= 400 ? 2 : 1; }
+function getArenaLevel() { return pData.trophies >= 1000 ? 3 : (pData.trophies >= 400 ? 2 : 1); }
 
 function updateTopResources() {
     document.getElementById('goldCounter').innerText = pData.gold;
@@ -178,7 +211,7 @@ function updateTopResources() {
     
     let aLevel = getArenaLevel();
     document.getElementById('arenaTitleUi').innerText = `Arena ${aLevel}`;
-    document.getElementById('arenaNameUi').innerText = aLevel === 1 ? 'Neon Valley' : 'Cyber Slums';
+    document.getElementById('arenaNameUi').innerText = aLevel === 1 ? 'Neon Valley' : (aLevel === 2 ? 'Cyber Slums' : 'Quantum Spire');
     if(pData.username) document.getElementById('homeNameTag').innerText = `COMMANDER: ${pData.username}`;
     
     let xpReq = pData.level * 100 + (pData.level * pData.level * 50);
@@ -437,6 +470,16 @@ function renderModalView() {
         vHtml = I('👺','left:12%;bottom:16px',{size:30}) + I('🏰','left:10%;bottom:14px',{size:20,extra:'opacity:0.6;'}) + I('🥷','left:34%;bottom:40px',{size:16,extra:'animation:smashPulse 2s infinite;'}) + I('🥷','left:30%;bottom:16px',{size:16,extra:'animation:smashPulse 2s infinite;'}) + I('🧟','right:14%;bottom:16px',{size:28}); }
     else if(key === 'indy') { tacticCap = "Tunnel straight onto a tower or support";
         vHtml = I('🕳️','right:14%;bottom:14px',{size:24}) + I('🤠','right:16%;bottom:18px',{size:30,extra:'animation:float 1.6s infinite ease-in-out;'}) + I('🏰','right:8%;bottom:14px',{size:34,extra:'opacity:0.9;'}); }
+    else if(key === 'golem') { tacticCap = "Lead the charge — stack your DPS behind him";
+        vHtml = I('👊','left:10%;bottom:14px',{size:34,extra:'animation:tacticalWalk 4s infinite linear;'}) + I('🃏','left:6%;bottom:18px',{size:18}) + I('🏰','right:8%;bottom:14px',{size:34}); }
+    else if(key === 'drake') { tacticCap = "Rocket over the river and blast a lane";
+        vHtml = I('💥','left:12%;bottom:42px',{size:30,extra:'animation:float 2.6s infinite ease-in-out;'}) + `<span style="position:absolute;left:34%;bottom:46px;font-size:18px;animation:arrowShot 1.1s infinite;">💥</span>` + I('🏢','right:16%;bottom:14px',{size:30}); }
+    else if(key === 'sniper') { tacticCap = "Fling cards from max range behind your tank";
+        vHtml = I('🃏','left:8%;bottom:16px',{size:26}) + `<div style="position:absolute;left:18%;bottom:30px;width:62%;height:2px;background:rgba(70,211,255,0.6);"></div>` + I('🤺','right:22%;bottom:16px',{size:22,extra:'animation:tacticalDie 1.6s infinite;'}) + I('🏰','right:8%;bottom:14px',{size:30}); }
+    else if(key === 'medic') { tacticCap = "Heal your push so it outlasts theirs";
+        vHtml = I('🤍','left:14%;bottom:16px',{size:26}) + `<div style="position:absolute;left:16%;bottom:14px;width:42px;height:42px;border:3px solid #2ecc71;border-radius:50%;animation:smashPulse 1.8s infinite;"></div>` + I('👊','left:46%;bottom:16px',{size:28}) + I('🏰','right:10%;bottom:14px',{size:30}); }
+    else if(key === 'drones') { tacticCap = "Swarm a lone tank or an open tower";
+        vHtml = I('🪖','left:18%;bottom:16px',{size:20}) + I('🪖','left:30%;bottom:16px',{size:20}) + I('🪖','left:24%;bottom:38px',{size:20}) + I('🍖','right:20%;bottom:14px',{size:32}); }
 
     let capColor = tier === 0 ? '#ffd84a' : (tier === 1 ? '#c39bd3' : '#e056fd');
     document.getElementById('modVideo').innerHTML =
@@ -672,6 +715,7 @@ function spawnTroop(team, type, x, y, isSummon = false, isEvoSpawn = false) {
 
         if(base.trait === 'shield') t.shield = 3; if(base.trait === 'charge') { t.chargeTimer = 0; t.isCharging = false; }
         if(base.trait === 'building') { t.lifeTime = 1800; t.spd = 0; } if(base.trait === 'summoner') { t.summonTimer = 360; }
+        if(base.trait === 'healer') { t.healTimer = 80; }
 
         // EVOLUTION POWER SPIKE: evolved units are tougher and hit harder (scales with tier)
         if(isEvoSpawn) {
@@ -722,7 +766,12 @@ const EVO_ABILITIES = {
     naruto:  { name:'RASENGAN',      icon:'🌀', cost:3, cd:1500, fn:(u)=>{ u.forEach(nn => { let e = nearestEnemy(nn); if(e){ applyDamage(e,620,'blue'); boom(e.x,e.y); } spawnTroop('blue','ninja',nn.x,nn.y,true); }); } },
     martian: { name:'MIND BLAST',    icon:'👽', cost:3, cd:1500, fn:(u)=>{ u.forEach(m => { boom(m.x,m.y); enemiesNear(m,125).forEach(e => { applyDamage(e,260,'blue'); stun(e,120); }); }); } },
     nobu:    { name:'SHADOW RITUAL', icon:'👺', cost:3, cd:1500, fn:(u)=>{ u.forEach(nb => { for(let s=0;s<4;s++) spawnTroop('blue','ninja',nb.x,nb.y,true); }); } },
-    indy:    { name:'WHIP PULL',     icon:'🤠', cost:2, cd:1200, fn:(u)=>{ u.forEach(ix => { let e = nearestEnemy(ix,true); if(e){ let ang = Math.atan2(ix.y-e.y, ix.x-e.x); e.x += Math.cos(ang)*60; e.y += Math.sin(ang)*60; stun(e,120); applyDamage(e,120,'blue'); } }); } }
+    indy:    { name:'WHIP PULL',     icon:'🤠', cost:2, cd:1200, fn:(u)=>{ u.forEach(ix => { let e = nearestEnemy(ix,true); if(e){ let ang = Math.atan2(ix.y-e.y, ix.x-e.x); e.x += Math.cos(ang)*60; e.y += Math.sin(ang)*60; stun(e,120); applyDamage(e,120,'blue'); } }); } },
+    golem:   { name:'THUNDER CLAP',  icon:'👊', cost:3, cd:1600, fn:(u)=>{ u.forEach(g => { boom(g.x,g.y); enemiesNear(g,130).forEach(e => { applyDamage(e,220,'blue'); stun(e,100); }); }); } },
+    drake:   { name:'HOWITZER',      icon:'💥', cost:3, cd:1500, fn:(u)=>{ u.forEach(d => { boom(d.x, d.y - 30); enemiesNear(d,120).forEach(e => applyDamage(e,300,'blue')); }); } },
+    sniper:  { name:'ROYAL FLUSH',   icon:'🃏', cost:2, cd:1400, fn:(u)=>{ u.forEach(s => { let e = nearestEnemy(s); if(e){ applyDamage(e,800,'blue'); boom(e.x,e.y); } }); } },
+    medic:   { name:'MASS HEAL',     icon:'🤍', cost:2, cd:1500, fn:()=>{ troops.filter(t => t.team==='blue' && t.hp>0).forEach(a => { a.hp = Math.min(a.maxHp, a.hp + a.maxHp*0.5); a.hitFlash = 6; }); } },
+    drones:  { name:'REINFORCE',     icon:'🪖', cost:2, cd:1300, fn:(u)=>{ u.forEach(d => { for(let s=0;s<2;s++) spawnTroop('blue','drones',d.x,d.y,true); }); } }
 };
 
 // Render one button per active tier-2 hero, stacked so they never overlap
@@ -925,6 +974,13 @@ function updateEngine() {
         if(t.summonTimer !== undefined) {
             t.summonTimer--; if(t.summonTimer <= 0) { for(let s=0; s<3; s++) spawnTroop(t.team, 'ninja', t.x, t.y, true); t.summonTimer = 360; }
         }
+        if(t.healTimer !== undefined) {
+            t.healTimer--; if(t.healTimer <= 0) {
+                troops.forEach(a => { if(a.team === t.team && a.hp > 0 && a !== t && Math.hypot(a.x - t.x, a.y - t.y) < 95) { a.hp = Math.min(a.maxHp, a.hp + a.maxHp * 0.07); a.hitFlash = 4; } });
+                particles.push({ x: t.x, y: t.y, r: 6, alpha: 1, grow: 2.2, fade: 0.05, color: '46,204,113', lw: 2, type: 'ring' });
+                t.healTimer = 90;
+            }
+        }
 
         if(t.state === 'hooking' && t.hookTarget) {
             let ht = t.hookTarget;
@@ -994,7 +1050,7 @@ function updateEngine() {
                 let atkAngle = Math.atan2(nearest.y - t.y, nearest.x - t.x);
                 let outDamage = t.dmg; let isPowerArrow = t.type === 'archer' && t.abilityActive > 0;
 
-                if(t.type === 'archer') { projectiles.push({x: t.x, y: t.y, tx: nearest.x, ty: nearest.y, angle: atkAngle, spd: 8, dmg: outDamage, team: t.team, target: nearest, splash: false, isPower: isPowerArrow}); }
+                if(t.type === 'archer' || t.type === 'sniper') { projectiles.push({x: t.x, y: t.y, tx: nearest.x, ty: nearest.y, angle: atkAngle, spd: t.type === 'sniper' ? 13 : 8, dmg: outDamage, team: t.team, target: nearest, splash: false, isPower: isPowerArrow}); }
                 else if(t.type === 'tower' || t.type === 'nobu') { let tAng = Math.atan2(nearest.y - (t.y-15), nearest.x - t.x); projectiles.push({x: t.x, y: t.y-15, tx: nearest.x, ty: nearest.y, angle: tAng, spd: 6, dmg: outDamage, team: t.team, target: nearest, splash: true}); }
                 else if(t.type === 'deku') { particles.push({x: t.x, y: t.y, angle: atkAngle, type: 'cone', alpha: 1}); possibleTargets.forEach(e => { if(Math.hypot(e.x - t.x, e.y - t.y) <= 65) { let angleDiff = Math.abs(Math.atan2(e.y - t.y, e.x - t.x) - atkAngle); if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff; if (angleDiff <= Math.PI / 3) applyDamage(e, outDamage, t.team); } }); } 
                 else { applyDamage(nearest, outDamage, t.team); }
@@ -1073,6 +1129,11 @@ function drawTroop3D(t, preview) {
     else if(t.type === 'martian') { baseC = '#27ae60'; topC = '#2ecc71'; w=12; h=20; }
     else if(t.type === 'nobu') { baseC = '#c0392b'; topC = '#e74c3c'; w=10; h=18; }
     else if(t.type === 'indy') { baseC = '#5a3d22'; topC = '#7a5230'; w=10; h=17; }
+    else if(t.type === 'golem') { baseC = '#1e7d34'; topC = '#2ecc71'; w=15; h=24; }
+    else if(t.type === 'drake') { baseC = '#262626'; topC = '#e67e22'; w=11; h=18; }
+    else if(t.type === 'sniper') { baseC = '#5e2a8a'; topC = '#7d3ca8'; w=8; h=17; }
+    else if(t.type === 'medic') { baseC = '#cfd6da'; topC = '#ecf0f1'; w=11; h=17; }
+    else if(t.type === 'drones') { baseC = '#2f6b32'; topC = '#4a8c3f'; w=6; h=12; }
 
     let flash = t.hitFlash > 0;
     if(flash) { baseC = '#ffffff'; topC = '#ffe9e9'; }
@@ -1128,7 +1189,7 @@ function drawTroop3D(t, preview) {
         ctx.strokeStyle = eyeC; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.shadowColor = eyeC; ctx.shadowBlur = 6;
         ctx.beginPath(); ctx.moveTo(ex-4.6,-h-1.6); ctx.lineTo(ex-1.2,-h-0.2); ctx.moveTo(ex+1.2,-h-0.2); ctx.lineTo(ex+4.6,-h-1.6); ctx.stroke();
         ctx.shadowBlur = 0; ctx.lineCap = 'butt';
-    } else if(t.type==='ninja' || t.type==='ultron' || t.type==='martian' || t.type==='nobu' || t.type==='naruto') {
+    } else if(t.type==='ninja' || t.type==='ultron' || t.type==='martian' || t.type==='nobu' || t.type==='naruto' || t.type==='golem' || t.type==='drake' || t.type==='drones' || t.type==='sniper' || t.type==='medic') {
         /* these draw their own face/mask details below */
     } else {
         ctx.strokeStyle = 'rgba(10,12,22,0.92)'; ctx.lineWidth = 1.7; ctx.lineCap = 'round';
@@ -1297,6 +1358,48 @@ function drawTroop3D(t, preview) {
         ctx.fillStyle = '#3a2a18'; ctx.fillRect(-hr*0.8, -h-hr*0.5, hr*1.6, 2);
         // coiled whip
         ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-t.facing*(w+3), -h*0.4, 4, 0, Math.PI*1.6); ctx.stroke();
+    }
+    else if(t.type === 'golem') {
+        // green rage-monster: huge fists, torn purple shorts, dark hair, furious brow
+        ctx.fillStyle = flash ? '#fff' : baseC; ctx.beginPath(); ctx.arc(-w-3, -h*0.35, 6, 0, 6.28); ctx.arc(w+3, -h*0.35, 6, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#5b2c83'; rrp(-w, -h*0.26, w*2, h*0.26, 2); ctx.fill();
+        ctx.fillStyle = '#161616'; for(let s=-2;s<=2;s++){ ctx.beginPath(); ctx.moveTo(s*3, -h-hr*0.3); ctx.lineTo(s*3-2, -h-hr-3); ctx.lineTo(s*3+2, -h-hr*0.3); ctx.fill(); }
+        ctx.fillStyle = '#14591f'; rrp(-hr*0.85, -h-2.5, hr*1.7, 2.6, 1); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex-2.6, -h+0.6, 1.5, 0, 6.28); ctx.arc(ex+2.6, -h+0.6, 1.5, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(ex-2.6, -h+0.6, 0.8, 0, 6.28); ctx.arc(ex+2.6, -h+0.6, 0.8, 0, 6.28); ctx.fill();
+    }
+    else if(t.type === 'drake') {
+        // explosive hero: jet blasts beneath, spiky pale hair, grenade gauntlets, red eyes
+        ctx.fillStyle = 'rgba(255,140,40,0.6)'; ctx.beginPath(); ctx.arc(-w*0.5, 3, 3, 0, 6.28); ctx.arc(w*0.5, 3, 3, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#f2e6bf'; for(let s=-3;s<=3;s++){ ctx.beginPath(); ctx.moveTo(s*2.2, -h-hr*0.25); ctx.lineTo(s*2.2-2, -h-hr-4); ctx.lineTo(s*2.2+2.2, -h-hr*0.25); ctx.fill(); }
+        ctx.fillStyle = '#333'; rrp(-w-3, -h*0.55, 4.5, h*0.42, 1); ctx.fill(); rrp(w-1.5, -h*0.55, 4.5, h*0.42, 1); ctx.fill();
+        ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(-w-0.7, -h*0.4, 1.5, 0, 6.28); ctx.arc(w+0.7, -h*0.4, 1.5, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(ex-2.4, -h, 1.3, 0, 6.28); ctx.arc(ex+2.4, -h, 1.3, 0, 6.28); ctx.fill();
+        if(t.state === 'attack') { ctx.fillStyle = 'rgba(255,160,40,0.85)'; ctx.beginPath(); ctx.arc(t.facing*(w+6), -h*0.5, 5.5, 0, 6.28); ctx.fill(); ctx.fillStyle = 'rgba(255,235,140,0.95)'; ctx.beginPath(); ctx.arc(t.facing*(w+6), -h*0.5, 2.6, 0, 6.28); ctx.fill(); }
+    }
+    else if(t.type === 'sniper') {
+        // clown trickster: green hair, white face, red grin, throws a card
+        ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(0, -h, hr*1.12, Math.PI*0.88, Math.PI*2.12); ctx.fill();
+        ctx.fillStyle = flash ? '#fff' : '#f0f0f0'; ctx.beginPath(); ctx.arc(0, -h, hr*0.92, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(ex-2.4, -h-0.5, 1, 0, 6.28); ctx.arc(ex+2.4, -h-0.5, 1, 0, 6.28); ctx.fill();
+        ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(0, -h+1, hr*0.5, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+        ctx.save(); ctx.translate(t.facing*(w+6), -h*0.55); ctx.rotate(t.facing*0.5); ctx.fillStyle = '#ecf0f1'; rrp(-3, -4, 6, 8, 1); ctx.fill(); ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 0.7; ctx.strokeRect(-3, -4, 6, 8); ctx.restore();
+    }
+    else if(t.type === 'medic') {
+        // soft white care-robot: round head, two-dot face + line, red cross
+        ctx.fillStyle = flash ? '#fff' : '#f4f6f7'; ctx.beginPath(); ctx.arc(0, -h, hr, 0, 6.28); ctx.fill();
+        ctx.strokeStyle = 'rgba(120,140,150,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.strokeStyle = '#222'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-2.4, -h); ctx.lineTo(2.4, -h); ctx.stroke();
+        ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(-2.6, -h, 1.2, 0, 6.28); ctx.arc(2.6, -h, 1.2, 0, 6.28); ctx.fill();
+        ctx.fillStyle = '#e74c3c'; ctx.fillRect(-1.2, -h*0.55, 2.4, 7); ctx.fillRect(-3.4, -h*0.55+2.3, 7, 2.4);
+        if(t.healTimer !== undefined && t.healTimer < 16) { ctx.strokeStyle = 'rgba(46,204,113,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -h*0.4, 13, 0, 6.28); ctx.stroke(); }
+    }
+    else if(t.type === 'drones') {
+        // little plastic soldier: helmet + rifle, matte green
+        ctx.fillStyle = flash ? '#fff' : '#274d22'; ctx.beginPath(); ctx.arc(0, -h, hr*1.05, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = flash ? '#fff' : '#274d22'; ctx.fillRect(-hr, -h-0.5, hr*2, 1.6);
+        ctx.strokeStyle = '#16330f'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-t.facing*2, -h*0.5); ctx.lineTo(t.facing*(w+6), -h*0.62); ctx.stroke();
+        ctx.fillStyle = '#0a0a0a'; ctx.fillRect(ex-1.6, -h, 1.1, 1.1); ctx.fillRect(ex+0.6, -h, 1.1, 1.1);
     }
 
     if(!preview) drawHealthBar(t, w, h, w * 1.05); ctx.restore();
