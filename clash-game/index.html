@@ -1,126 +1,276 @@
-/* Neon Blitz Tactics — static server + WebSocket matchmaking/relay.
-   ZERO dependencies. Just:   node server.js
-   (no npm install needed). Defaults to http://localhost:3000 */
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#234f93">
+<title>Neon Blitz Tactics — Online</title>
+<link rel="stylesheet" href="style.css?v=8">
+</head>
+<body>
+<div id="gameRoot">
+<div id="appContainer">
+    <div id="resourceHeader">
+        <div id="xpContainer">
+            <div id="lvlBadge">Lv.1</div>
+            <div id="xpBarWrap"><div id="xpFill"></div><div id="xpText">👑 0/150</div></div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <div class="resNode" onclick="injectDevGold()"><span style="color:#ffd23f;">🪙</span><span id="goldCounter">0</span><span style="color:#ffd84a;font-size:13px;">+</span></div>
+            <div class="resNode" onclick="injectDevGems()"><span style="color:#d36bff;">💎</span><span id="gemCounter">0</span><span style="color:#d36bff;font-size:13px;">+</span></div>
+        </div>
+    </div>
 
-const PORT = process.env.PORT || 3000;
-const PUBLIC_DIR = path.join(__dirname, 'public');
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
-    '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.json': 'application/json' };
+    <div id="screenShop" class="tabScreen hidden">
+        <div class="menuHeader">Shop</div>
+        <div id="epicSundayBanner" class="epicSundayBanner">🎉 Epic Sunday! Free Reward! 🎉</div>
+        <div class="shopSectionTitle">Daily Deals</div>
+        <div class="shopGrid" id="shopDealsContainer"></div>
+        <div class="shopSectionTitle">Treasure Chests</div>
+        <div style="display:flex; gap:12px; width:100%; justify-content:center;">
+            <div style="background:linear-gradient(180deg,#1c4685,#13315f); border:3px solid #ffcb2e; border-radius:14px; padding:15px; width:46%; display:flex; flex-direction:column; align-items:center; box-shadow:0 5px 0 #0e2348;">
+                <div style="font-size:46px;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.5));">📦</div><div style="font-size:13px; font-weight:900; color:#fff; margin-top:6px;">Silver Chest</div><div style="font-size:9px; color:#bcd4f5; text-align:center; margin-top:4px; margin-bottom:10px; height:22px;">Gold &amp; 4 Card Stacks</div>
+                <button class="btn" style="padding:7px 14px; font-size:13px; width:100%;" onclick="buyChest('silver')">💎 50</button>
+            </div>
+            <div style="background:linear-gradient(180deg,#5a3a0e,#3a2608); border:3px solid #ffd84a; border-radius:14px; padding:15px; width:46%; display:flex; flex-direction:column; align-items:center; box-shadow:0 5px 0 #2a1c06;">
+                <div style="font-size:46px;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.5));">🧰</div><div style="font-size:13px; font-weight:900; color:#fff; margin-top:6px;">Golden Chest</div><div style="font-size:9px; color:#ffd84a; text-align:center; margin-top:4px; margin-bottom:10px; height:22px;">Massive Gold &amp; 8 Card Stacks</div>
+                <button class="btn" style="padding:7px 14px; font-size:13px; width:100%;" onclick="buyChest('golden')">💎 150</button>
+            </div>
+        </div>
+    </div>
 
-/* ---------------- static file server ---------------- */
-const server = http.createServer((req, res) => {
-    let urlPath = decodeURIComponent(req.url.split('?')[0]);
-    if(urlPath === '/') urlPath = '/index.html';
-    const safe = path.normalize(urlPath).replace(/^(\.\.([\/\\]|$))+/, '');
-    const filePath = path.join(PUBLIC_DIR, safe);
-    if(!filePath.startsWith(PUBLIC_DIR)) { res.writeHead(403); res.end('Forbidden'); return; }
-    fs.readFile(filePath, (err, data) => {
-        if(err) { res.writeHead(404); res.end('Not found'); return; }
-        res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream' });
-        res.end(data);
-    });
-});
+    <div id="screenTroops" class="tabScreen hidden">
+        <div class="menuHeader" style="margin-top:5px;">Cards</div>
+        <div style="font-size:11px; color:#bcd4f5; margin-top:-8px; margin-bottom:10px; text-transform:uppercase; text-align:center; font-weight:600;">Tap a slot, then tap another to swap!<br>Or tap any card to view intel.</div>
+        <div class="deckSectionTitle">Battle Deck (8 Cards)</div>
+        <div class="deckBuilderGrid" id="activeDeckBuilderGrid"></div>
+        <div class="deckSectionTitle">Card Collection</div>
+        <div class="cardGrid" id="fullCardGrid"></div>
+    </div>
 
-/* ---------------- minimal WebSocket (RFC 6455) ---------------- */
-function wsFrame(str) {
-    const payload = Buffer.from(str, 'utf8');
-    const len = payload.length;
-    let header;
-    if(len < 126) { header = Buffer.from([0x81, len]); }
-    else if(len < 65536) { header = Buffer.alloc(4); header[0] = 0x81; header[1] = 126; header.writeUInt16BE(len, 2); }
-    else { header = Buffer.alloc(10); header[0] = 0x81; header[1] = 127; header.writeUInt32BE(Math.floor(len / 4294967296), 2); header.writeUInt32BE(len >>> 0, 6); }
-    return Buffer.concat([header, payload]);
-}
-function parseFrames(sock) {
-    let buf = sock._buf;
-    while(buf.length >= 2) {
-        const b0 = buf[0], b1 = buf[1];
-        const opcode = b0 & 0x0f;
-        const masked = (b1 & 0x80) !== 0;
-        let len = b1 & 0x7f;
-        let off = 2;
-        if(len === 126) { if(buf.length < 4) break; len = buf.readUInt16BE(2); off = 4; }
-        else if(len === 127) { if(buf.length < 10) break; len = Number(buf.readBigUInt64BE(2)); off = 10; }
-        let mask;
-        if(masked) { if(buf.length < off + 4) break; mask = buf.slice(off, off + 4); off += 4; }
-        if(buf.length < off + len) break;               // wait for the rest of the frame
-        let payload = buf.slice(off, off + len);
-        if(masked) { const out = Buffer.alloc(len); for(let i = 0; i < len; i++) out[i] = payload[i] ^ mask[i & 3]; payload = out; }
-        buf = buf.slice(off + len); sock._buf = buf;
-        if(opcode === 0x8) { sock.end(); return; }       // close
-        else if(opcode === 0x9) { sock.write(Buffer.concat([Buffer.from([0x8A, payload.length]), payload])); } // ping -> pong
-        else if(opcode === 0x1 || opcode === 0x2) { sock._onmsg(payload.toString('utf8')); } // text/binary
-    }
-}
-server.on('upgrade', (req, socket) => {
-    const key = req.headers['sec-websocket-key'];
-    if(!key) { socket.destroy(); return; }
-    const accept = crypto.createHash('sha1').update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
-    socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + accept + '\r\n\r\n');
-    socket.setNoDelay(true);
-    socket._buf = Buffer.alloc(0);
-    const conn = { sock: socket, readyState: 1, partner: null, info: { name: 'Player' }, roomCode: null };
-    conn.send = (obj) => { if(conn.readyState === 1) { try { socket.write(wsFrame(JSON.stringify(obj))); } catch(e) {} } };
-    socket._onmsg = (str) => { let m; try { m = JSON.parse(str); } catch(e) { return; } onMessage(conn, m); };
-    socket.on('data', (chunk) => { socket._buf = Buffer.concat([socket._buf, chunk]); try { parseFrames(socket); } catch(e) {} });
-    socket.on('close', () => { conn.readyState = 3; onClose(conn); });
-    socket.on('error', () => { conn.readyState = 3; });
-});
+    <div id="screenHome" class="tabScreen">
+        <div style="background:linear-gradient(160deg,#2861b3,#16356a); border:3px solid #ffcb2e; border-radius:20px; width:100%; padding:34px 20px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; box-shadow:0 10px 0 #0e2348, 0 14px 24px rgba(0,0,0,0.5); margin-top:46px;">
+            <div style="font-size:13px;font-weight:900;color:#ffd84a;letter-spacing:3px;margin-bottom:6px;text-transform:uppercase;" id="arenaTitleUi">Arena 1</div>
+            <div style="font-size:32px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:1px;text-shadow:0 4px 8px rgba(0,0,0,0.5);" id="arenaNameUi">Neon Valley</div>
+            <div style="font-size:16px;color:#ffd84a;margin-top:10px;font-weight:900;background:#0c2348;padding:6px 18px;border-radius:20px;border:2px solid #ffcb2e; cursor:pointer; position:relative;" onclick="openTrophyRoad()">
+                <span id="homeTrophyText">🏆 0 Trophies</span><div id="trophyRedDot" class="redDot"></div>
+            </div>
+            <div style="width:100%; height:3px; background:linear-gradient(90deg, transparent, #ffcb2e, transparent); margin:30px 0; opacity:0.6;"></div>
+            <div id="homeNameTag" style="font-size:14px; font-weight:900; color:#46d3ff; margin-bottom:14px; text-transform:uppercase; letter-spacing:2px; text-shadow:0 1px 3px rgba(0,0,0,0.5);"></div>
+            <button class="bigBattleBtn" style="margin-bottom:16px;" onclick="startMatchmaking()">⚔ BATTLE</button>
+            <button class="bigBattleBtn" style="margin-bottom:16px; background:linear-gradient(180deg,#b06be0,#7a3aa8); border-bottom-color:#4a1c6e; font-size:20px; width:250px; height:56px;" onclick="openOnlineMenu()">🌐 PLAY ONLINE</button>
+            <button class="resetBtn" onclick="factoryResetAccount()">↺ Reset Account</button>
+        </div>
+    </div>
 
-/* ---------------- matchmaking ---------------- */
-let queue = [];      // conns waiting for a random opponent
-let rooms = {};      // CODE -> { host: conn }
+    <div id="screenEvos" class="tabScreen hidden">
+        <div class="menuHeader">Evolution</div>
+        <div class="evoHeaderBox">
+            <div class="evoResource" onclick="injectDevDust()" style="cursor:pointer;" title="DEV: +1200 dust">
+                <span style="font-size:26px; text-shadow:0 0 10px #9b59b6;">🌌</span>
+                <span style="font-size:11px; color:#fff; margin-top:4px;">Evo Dust ＋</span>
+                <span id="uiEvoDust" style="color:#e056fd; font-weight:900;">0</span>
+            </div>
+            <button class="btn" style="padding:9px 12px; font-size:9px; line-height:1.3;" onclick="convertDustToShard()">CONVERT 200 DUST<br>➔ 1 SHARD</button>
+            <div class="evoResource" onclick="injectDevShards()" style="cursor:pointer;" title="DEV: +6 shards">
+                <span style="font-size:26px; text-shadow:0 0 10px #e056fd;">🔮</span>
+                <span style="font-size:11px; color:#fff; margin-top:4px;">Shards ＋</span>
+                <span id="uiEvoShards" style="color:#e056fd; font-weight:900;">0</span>
+            </div>
+        </div>
+        <div class="deckSectionTitle" style="border-color:#b06be0; color:#e056fd;">Eligible Heroes</div>
+        <div id="evoCardList" style="width:100%; display:flex; flex-direction:column;"></div>
+    </div>
 
-function send(conn, obj) { if(conn) conn.send(obj); }
-function genCode() {
-    const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-    let c; do { c = ''; for(let i = 0; i < 4; i++) c += A[Math.floor(Math.random() * A.length)]; } while(rooms[c]);
-    return c;
-}
-function pair(host, guest) {
-    host.partner = guest; guest.partner = host;
-    send(host,  { type: 'matched', role: 'host',  oppName: guest.info.name, oppDeck: guest.info.deck });
-    send(guest, { type: 'matched', role: 'guest', oppName: host.info.name,  oppDeck: host.info.deck });
-    console.log(`Matched: ${host.info.name} (host) vs ${guest.info.name} (guest)`);
-}
-function onMessage(conn, m) {
-    if(m.type === 'queue') {
-        conn.info = { name: (m.name || 'Player').toString().substring(0, 12), deck: m.deck, levels: m.levels };
-        const opp = queue.find(s => s.readyState === 1 && s !== conn);
-        if(opp) { queue = queue.filter(s => s !== opp && s !== conn); pair(opp, conn); }
-        else if(!queue.includes(conn)) queue.push(conn);
-    } else if(m.type === 'create') {
-        conn.info = { name: (m.name || 'Player').toString().substring(0, 12), deck: m.deck, levels: m.levels };
-        if(conn.roomCode && rooms[conn.roomCode]) delete rooms[conn.roomCode];
-        const code = genCode(); rooms[code] = { host: conn }; conn.roomCode = code;
-        send(conn, { type: 'created', code: code });
-        console.log(`Room created: ${code} by ${conn.info.name}`);
-    } else if(m.type === 'join') {
-        conn.info = { name: (m.name || 'Player').toString().substring(0, 12), deck: m.deck, levels: m.levels };
-        const code = (m.code || '').toString().toUpperCase();
-        const room = rooms[code];
-        if(room && room.host && room.host.readyState === 1 && room.host !== conn) {
-            delete rooms[code]; room.host.roomCode = null; pair(room.host, conn);
-        } else { send(conn, { type: 'joinfail', code: code }); }
-    } else if(m.type === 'cancel') {
-        queue = queue.filter(s => s !== conn);
-        if(conn.roomCode) { delete rooms[conn.roomCode]; conn.roomCode = null; }
-    } else {
-        if(conn.partner) send(conn.partner, m);          // relay deploy / state / end
-    }
-}
-function onClose(conn) {
-    queue = queue.filter(s => s !== conn);
-    if(conn.roomCode) { delete rooms[conn.roomCode]; conn.roomCode = null; }
-    if(conn.partner) { send(conn.partner, { type: 'oppleft' }); conn.partner.partner = null; conn.partner = null; }
-}
+    <div id="screenEvents" class="tabScreen hidden"><div class="menuHeader" style="margin-top:40px;">Events</div><div class="noticeBox"><div style="font-size:64px; margin-bottom:15px;">📅</div><div style="font-size:18px; font-weight:900; color:#fff; margin-bottom:8px;">No Active Events</div><div style="font-size:12px; color:#bcd4f5;">Check back soon, Commander!</div></div></div>
 
-server.listen(PORT, () => {
-    console.log('Neon Blitz Tactics server running (no dependencies needed):');
-    console.log('  On this PC:   http://localhost:' + PORT);
-    console.log('  Other devices: http://<YOUR-LAN-IP>:' + PORT + '   (same Wi-Fi)');
-});
+    <div id="navDock">
+        <button class="navBtn" onclick="switchTab('Shop', this)"><span>🛒</span><span>Shop</span></button>
+        <button class="navBtn" onclick="switchTab('Troops', this)"><span>🎴</span><span>Cards</span></button>
+        <button class="navBtn active" onclick="switchTab('Home', this)"><span>⚔️</span><span>Battle</span></button>
+        <button class="navBtn" onclick="switchTab('Evos', this)"><span>🧪</span><span>Evo</span></button>
+        <button class="navBtn" onclick="switchTab('Events', this)"><span>📅</span><span>Events</span></button>
+    </div>
+</div>
+
+<div id="tutorialOverlay"<div id="tutorialOverlay" class="overlayModal" style="z-index:9999;">
+    <div class="tutAvatar">🤖</div>
+    <div class="tutDialog" id="tutText">Incoming transmission...</div>
+    <input type="text" id="tutInput" placeholder="Enter Call-Sign" maxlength="12" style="display:none; width:80%; padding:12px; background:#050508; border:2px solid #45a29e; border-radius:8px; color:#fff; font-size:16px; text-align:center; box-sizing:border-box; margin-bottom:15px; outline:none;">
+    <button class="btn" style="padding:15px 50px; font-size:18px; z-index:10000; position:relative; background:#11141a; border-color:#00ffcc; color:#00ffcc; box-shadow:0 0 15px rgba(0,255,204,0.4);" onclick="nextTutorialStep()" id="tutBtn">NEXT</button>
+</div>
+
+<div id="chestOverlay" class="overlayModal">
+    <div class="menuHeader" id="chestHeader">VICTORY CHEST</div>
+    <div class="chestAnimBox" id="chestGraphic">🧰</div>
+    <div id="chestHint" style="font-size:13px;font-weight:900;color:#ffd84a;letter-spacing:2px;text-transform:uppercase;margin-bottom:18px;animation:float 1.8s infinite ease-in-out;">👆 Tap the chest to open!</div>
+    <div id="chestLootArea" style="width:100%; max-width:300px; display:none; flex-direction:column; margin-bottom:20px;"></div>
+    <button class="btn" style="padding:10px 40px; font-size:16px; display:none;" onclick="closeChest()" id="chestBtn">COLLECT</button>
+</div>
+
+<div id="trophyRoadOverlay" class="overlayModal" style="padding:0; justify-content:flex-start; background:#0b0c10;">
+    <div style="width:100%; height:60px; background:#11141a; display:flex; align-items:center; padding:0 20px; box-sizing:border-box; border-bottom:2px solid #1f2833; flex-shrink:0;">
+        <div style="font-size:20px; font-weight:900; color:#ffd84a;">TROPHY ROAD</div>
+        <button class="btn" style="margin-left:auto; margin-right:48px; padding:6px 12px; font-size:11px;" onclick="injectDevTrophies()">+100 🏆 DEV</button>
+        <button class="closeBtn" style="top:15px;" onclick="closeTrophyRoad()">×</button>
+    </div>
+    <div id="trophyRoadContent" style="width:100%; flex:1; overflow-y:auto; display:flex; flex-direction:column; align-items:center; padding:20px; box-sizing:border-box; gap:0;"></div>
+</div>
+
+<div id="matchmakingOverlay" class="overlayModal">
+    <div class="radar"><div class="radarLine"></div><span style="font-size:30px;">🌐</span></div>
+    <div style="font-size:24px;font-weight:bold;color:#fff;margin-bottom:10px;">Searching...</div>
+    <div style="font-size:14px;color:#45a29e;font-family:monospace;" id="mmTimerTxt">ESTIMATED TIME: 0:10</div>
+    <button class="btn" style="margin-top:40px; border-color:#e74c3c; color:#e74c3c;" onclick="cancelMatchmaking()">CANCEL</button>
+</div>
+
+<div id="versusOverlay" class="overlayModal" style="padding:0; justify-content:center; z-index:110;">
+    <div class="vsDivider"></div>
+    <div class="vsText">VS</div>
+    <div class="vsTop">
+        <div class="vsProfile">
+            <div class="vsName" id="vsP1Name" style="color:#00ffcc;">Player 1</div>
+            <div class="vsFavBox">
+                <div class="vsFavIcon" id="vsP1Icon">🏹</div>
+                <div class="vsFavText">FAVORITE CARD</div>
+            </div>
+        </div>
+    </div>
+    <div class="vsBottom">
+        <div class="vsProfile">
+            <div class="vsName" id="vsP2Name" style="color:#ff3366;">Player 2</div>
+            <div class="vsFavBox" style="border-color:#ff3366;">
+                <div class="vsFavIcon" id="vsP2Icon">🦇</div>
+                <div class="vsFavText" style="color:#ff3366;">FAVORITE CARD</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="troopModal" class="overlayModal">
+    <div class="modalBox" id="troopModalBox">
+        <button class="closeBtn" onclick="closeTroopModal()" style="z-index:20;">×</button>
+        <div class="evoNavRow">
+            <button class="evoNavBtn" id="modalNavLeft" onclick="changeModalEvoView(-1)">◀</button>
+            <span id="modalTierTitle" style="color:#66fcf1; font-weight:bold; font-size:14px; letter-spacing:1px; width:120px; text-align:center;">BASE FORM</span>
+            <button class="evoNavBtn" id="modalNavRight" onclick="changeModalEvoView(1)">▶</button>
+        </div>
+        <div style="display:flex; justify-content:center; margin-bottom:12px;">
+            <div id="charPreviewFrame" style="width:148px; height:138px; background:radial-gradient(circle at 50% 38%, #2f6cc0, #0c2348); border:3px solid #ffcb2e; border-radius:16px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 22px rgba(0,0,0,0.55), 0 5px 0 #0e2348;">
+                <canvas id="charPreviewCanvas" width="130" height="130" style="width:130px; height:130px;"></canvas>
+            </div>
+        </div>
+        <div class="modalHead">
+            <div class="modalIcon" id="modIcon">🏹</div>
+            <div>
+                <div style="font-size:18px;font-weight:bold;color:#fff;" id="modName">Name</div>
+                <div style="font-size:11px;color:#45a29e;margin-top:2px;" id="modTrait">Desc</div>
+            </div>
+        </div>
+        <div class="modalStatsGrid" id="modStats"></div>
+        <div class="videoContainer"><div class="scanline"></div><div id="modVideo" style="display:flex;align-items:center;width:100%;height:100%;position:relative;font-size:40px;"></div></div>
+        <div class="stratTipBox" id="modStratBox"><span style="color:#f1c40f;font-weight:bold;">STRAT TIP:</span> <span id="modStratText">...</span></div>
+        <div class="abilityDescBox" id="modAbilityBox" style="display:none;"><span style="color:#e056fd;font-weight:bold;font-size:14px;">⚡ ACTIVE ABILITY</span><br><span id="modAbilityText">...</span></div>
+    </div>
+</div>
+
+<div id="evoModal" class="overlayModal">
+    <div class="modalBox" style="border-color:#9b59b6; box-shadow:0 10px 40px rgba(155,89,182,0.3);">
+        <button class="closeBtn" style="color:#e056fd;" onclick="closeEvoModal()">×</button>
+        <div style="text-align:center; font-size:60px; margin-bottom:10px;" id="evoModIcon">🏹</div>
+        <div style="text-align:center; font-size:20px; font-weight:bold; color:#fff; text-transform:uppercase; margin-bottom:5px;" id="evoModName">Purple Archer</div>
+        <div style="text-align:center; font-size:12px; color:#e056fd; margin-bottom:20px;" id="evoModTier">CURRENT TIER: 0</div>
+        
+        <div style="background:#11141a; border:1px solid #1f2833; border-radius:8px; padding:15px; text-align:center;">
+            <div style="font-size:12px; color:#45a29e; margin-bottom:10px;" id="evoModReqText">Requires 6 Shards to Evolve to Tier 1</div>
+            <button class="btn" id="evoModBtn" style="width:100%; border-color:#e056fd; color:#e056fd;" onclick="initiateEvolution()">EVOLVE (6 🔮)</button>
+        </div>
+    </div>
+</div>
+
+<div id="evoAnimationScreen" class="overlayModal" style="z-index:200;">
+    <div class="evoFlashScreen" id="evoFlashScreen"></div>
+    <div class="evoSpinCard" id="evoSpinIcon">🏹</div>
+    <div class="evoResultText" id="evoResultText">EVOLUTION COMPLETE</div>
+    <button class="btn" id="evoFinishBtn" style="margin-top:30px; border-color:#2ecc71; color:#2ecc71; opacity:0; transition:1s;" onclick="closeEvoAnimation()">AWESOME</button>
+</div>
+
+<div id="screenPlayGround" class="overlayModal" style="padding:0; justify-content:flex-start; background:#050508;">
+    <div id="combatMetaRow" style="width:420px;height:30px;display:flex;justify-content:space-between;align-items:center;padding:0 5px;box-sizing:border-box;z-index:45;margin-top:4px;margin-bottom:3px;font-weight:bold;">
+        <div style="font-size:18px;color:#fff;background:#11141a;padding:2px 12px;border-radius:6px;border:1px solid #1f2833;"><span style="color:#66fcf1">🔵</span> <span id="blueCrowns">0</span> - <span id="redCrowns">0</span> <span style="color:#ff3366">🔴</span></div>
+        <div id="matchTimer" style="font-size:18px;color:#66fcf1;background:#11141a;padding:2px 12px;border-radius:6px;border:1px solid #1f2833;">03:00</div>
+    </div>
+
+    <div id="abilityBtnDock" style="position:absolute; bottom:108px; right:14px; z-index:50;"></div>
+    <div id="netDebug" style="position:absolute; top:2px; left:4px; font-family:monospace; font-size:9px; color:#39ff14; z-index:60; text-shadow:0 0 2px #000; pointer-events:none;"></div>
+
+    <canvas id="arenaCanvas" width="360" height="608" style="touch-action:none;"></canvas>
+    
+    <div id="stadiumHud">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+            <div class="hudNameTag" id="hudOppName" style="color:#ff3366; border-color:#ff3366;">OPP</div>
+            <div class="hudNameTag" id="hudMyName" style="color:#00ffcc; border-color:#00ffcc;">ME</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <div id="statusMessage">BOARD ACTIVE</div>
+            <div id="elixirContainer"><div id="elixirBar"></div><div id="elixirText">5 / 10</div></div>
+        </div>
+    </div>
+    <div id="battleDeckDock"></div>
+</div>
+
+
+<div id="onlineOverlay" class="overlayModal" style="z-index:140;">
+    <div class="modalBox" style="max-width:340px; align-items:center;">
+        <button class="closeBtn" onclick="closeOnlineMenu()">×</button>
+        <div class="menuHeader" style="margin-top:0;">Online Match</div>
+        <div id="onlineStatus" style="font-size:13px; color:#bcd4f5; text-align:center; margin-bottom:12px; min-height:34px;">Play a live 1v1 against another device.</div>
+        <input id="onlineName" type="text" maxlength="12" placeholder="Your name" style="width:85%; padding:10px; background:#0a1c38; border:2px solid #ffcb2e; border-radius:10px; color:#fff; font-size:15px; text-align:center; box-sizing:border-box; margin-bottom:14px; outline:none;">
+
+        <!-- Default menu (shown until you pick an action) -->
+        <div id="onlineMainPanel" style="width:100%; display:flex; flex-direction:column; align-items:center;">
+            <button class="btn" style="width:85%;" onclick="onlineFindMatch()">⚡ QUICK MATCH</button>
+            <div style="width:85%; height:2px; background:linear-gradient(90deg,transparent,#ffcb2e,transparent); opacity:0.5; margin:16px 0 12px;"></div>
+            <div style="font-size:11px; color:#ffd84a; font-weight:900; letter-spacing:1px; margin-bottom:8px;">PLAY WITH A FRIEND</div>
+            <button class="btn" style="width:85%; background:linear-gradient(180deg,#5bd04a,#2f9c25) !important; border-bottom-color:#1d6b16 !important; color:#06330a !important;" onclick="onlineCreate()">＋ CREATE PARTY CODE</button>
+            <div style="display:flex; gap:6px; width:85%; margin-top:10px;">
+                <input id="joinCode" type="text" maxlength="4" placeholder="CODE" oninput="this.value=this.value.toUpperCase()" style="flex:1; min-width:0; padding:10px 6px; background:#0a1c38; border:2px solid #46d3ff; border-radius:10px; color:#46d3ff; font-size:18px; font-weight:900; letter-spacing:3px; text-align:center; box-sizing:border-box; outline:none;">
+                <button class="btn" style="padding:10px 14px; background:linear-gradient(180deg,#46d3ff,#1d95c5) !important; border-bottom-color:#125f80 !important; color:#04222e !important;" onclick="onlineJoin()">JOIN</button>
+            </div>
+            <div style="width:85%; height:2px; background:linear-gradient(90deg,transparent,#ffcb2e,transparent); opacity:0.5; margin:16px 0 12px;"></div>
+            <button class="btn" style="width:85%; background:linear-gradient(180deg,#b06be0,#7a3aa8) !important; border-bottom-color:#4a1c6e !important; color:#fff !important;" onclick="openInvite()">📲 INVITE FRIENDS</button>
+        </div>
+
+        <!-- Party code display (shown to the creator while waiting) -->
+        <div id="onlineCodePanel" style="width:100%; display:none; flex-direction:column; align-items:center;">
+            <div style="font-size:12px; color:#bcd4f5; margin-bottom:6px;">Share this code with your friend:</div>
+            <div id="roomCodeBig" style="font-size:46px; font-weight:900; letter-spacing:8px; color:#46d3ff; text-shadow:0 0 18px rgba(70,211,255,0.6); background:#0a1c38; border:3px solid #46d3ff; border-radius:14px; padding:10px 18px; margin-bottom:6px;">----</div>
+            <div style="font-size:11px; color:#9fc0e8; margin-bottom:8px;">Waiting for them to join…</div>
+        </div>
+
+        <button id="onlineCancelBtn" class="btn" style="width:85%; display:none; margin-top:14px; background:linear-gradient(180deg,#e8455a,#b8283b) !important; border-bottom-color:#7a1d27 !important; color:#fff !important;" onclick="onlineCancel()">CANCEL</button>
+    </div>
+</div>
+
+<div id="inviteOverlay" class="overlayModal" style="z-index:150;">
+    <div class="modalBox" style="max-width:330px; align-items:center;">
+        <button class="closeBtn" onclick="closeInvite()">×</button>
+        <div class="menuHeader" style="margin-top:0;">Invite</div>
+        <div style="font-size:12px; color:#bcd4f5; text-align:center; margin-bottom:12px;">Point a phone camera at the code, or send the link. They just open it — no setup.</div>
+        <div style="background:#fff; padding:10px; border-radius:14px; margin-bottom:12px;"><img id="inviteQR" alt="QR code" width="200" height="200" style="display:block;"></div>
+        <div id="inviteUrl" style="font-size:12px; color:#46d3ff; word-break:break-all; text-align:center; background:#0a1c38; border:1px solid #2a4d82; border-radius:8px; padding:8px; width:90%; box-sizing:border-box; margin-bottom:12px;">…</div>
+        <div style="display:flex; gap:8px; width:90%;">
+            <button class="btn" style="flex:1;" onclick="copyInvite()">COPY LINK</button>
+            <button class="btn" style="flex:1; background:linear-gradient(180deg,#5bd04a,#2f9c25) !important; border-bottom-color:#1d6b16 !important; color:#06330a !important;" onclick="shareInvite()">SHARE</button>
+        </div>
+        <div id="inviteMsg" style="font-size:11px; color:#2ecc71; margin-top:10px; min-height:14px;"></div>
+    </div>
+</div>
+
+</div>
+<script src="game.js?v=8"></script>
+<script src="net.js?v=8"></script>
+</body>
+</html>
