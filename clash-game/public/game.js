@@ -80,7 +80,7 @@ const STRAT_TIPS = {
     martian: {
         base: "The Martian is a flying tank that hits air and ground from range. Lead an air push with him so he soaks fire while dealing steady psychic damage.",
         evo1: "EVO TIER 1: phases through the first source of damage each life.",
-        evo2: "EVO TIER 2: a mind-blast that briefly turns an enemy troop to your side."
+        evo2: "EVO TIER 2: a Mind Control ability that turns a nearby enemy troop blue and makes it fight for you for ~10s."
     },
     nobu: {
         base: "The Hand sits at the back and periodically summons assassins to defend. Shield him behind your tower and let the endless ninjas grind down pushes.",
@@ -764,12 +764,18 @@ const EVO_ABILITIES = {
     tower:   { name:'OVERCHARGE',    icon:'🏢', cost:3, cd:1600, fn:(u)=>{ u.forEach(tw => enemiesNear(tw,210).slice(0,6).forEach(e => projectiles.push({x:tw.x,y:tw.y-15,tx:e.x,ty:e.y,angle:Math.atan2(e.y-tw.y,e.x-tw.x),spd:6,dmg:170,team:'blue',target:e,splash:true}))); } },
     ultron:  { name:'SENTIENCE',     icon:'🤖', cost:2, cd:1400, fn:(u)=>{ u.forEach(b => { b.hp = Math.min(b.maxHp, b.hp + b.maxHp*0.5); enemiesNear(b,95).forEach(e => stun(e,150)); }); } },
     naruto:  { name:'RASENGAN',      icon:'🌀', cost:3, cd:1500, fn:(u)=>{ u.forEach(nn => { let e = nearestEnemy(nn); if(e){ applyDamage(e,620,'blue'); boom(e.x,e.y); } spawnTroop('blue','ninja',nn.x,nn.y,true); }); } },
-    martian: { name:'MIND BLAST',    icon:'👽', cost:3, cd:1500, fn:(u)=>{ u.forEach(m => { boom(m.x,m.y); enemiesNear(m,125).forEach(e => { applyDamage(e,260,'blue'); stun(e,120); }); }); } },
+    martian: { name:'MIND CONTROL',  icon:'👽', cost:3, cd:1600, fn:(u)=>{ u.forEach(m => {
+        let cand = troops.filter(e => e.team !== 'blue' && e.hp > 0 && e.convertTimer === undefined && e.type !== 'tower' && Math.hypot(e.x - m.x, e.y - m.y) < 170);
+        cand.sort((a,b) => Math.hypot(a.x - m.x, a.y - m.y) - Math.hypot(b.x - m.x, b.y - m.y));
+        let e = cand[0];
+        if(e) { e.origTeam = e.team; e.team = 'blue'; e.convertTimer = 600; e.state = 'walk'; e.atkTimer = 0; e.hitFlash = 12;
+            for(let r=0;r<3;r++) particles.push({x:e.x, y:e.y, r:5+r*7, alpha:1, grow:2, fade:0.04, color:'224,86,253', lw:3, type:'ring'}); }
+    }); } },
     nobu:    { name:'SHADOW RITUAL', icon:'👺', cost:3, cd:1500, fn:(u)=>{ u.forEach(nb => { for(let s=0;s<4;s++) spawnTroop('blue','ninja',nb.x,nb.y,true); }); } },
     indy:    { name:'WHIP PULL',     icon:'🤠', cost:2, cd:1200, fn:(u)=>{ u.forEach(ix => { let e = nearestEnemy(ix,true); if(e){ let ang = Math.atan2(ix.y-e.y, ix.x-e.x); e.x += Math.cos(ang)*60; e.y += Math.sin(ang)*60; stun(e,120); applyDamage(e,120,'blue'); } }); } },
     golem:   { name:'THUNDER CLAP',  icon:'👊', cost:3, cd:1600, fn:(u)=>{ u.forEach(g => { boom(g.x,g.y); enemiesNear(g,130).forEach(e => { applyDamage(e,220,'blue'); stun(e,100); }); }); } },
     drake:   { name:'HOWITZER',      icon:'💥', cost:3, cd:1500, fn:(u)=>{ u.forEach(d => { boom(d.x, d.y - 30); enemiesNear(d,120).forEach(e => applyDamage(e,300,'blue')); }); } },
-    sniper:  { name:'ROYAL FLUSH',   icon:'🃏', cost:2, cd:1400, fn:(u)=>{ u.forEach(s => { let e = nearestEnemy(s); if(e){ applyDamage(e,800,'blue'); boom(e.x,e.y); } }); } },
+    sniper:  { name:'ROYAL FLUSH',   icon:'🃏', cost:2, cd:1400, fn:(u)=>{ u.forEach(s => { let e = nearestEnemy(s, true) || nearestEnemy(s); if(e){ projectiles.push({x:s.x, y:s.y-6, tx:e.x, ty:e.y, angle:Math.atan2(e.y-s.y, e.x-s.x), spd:13, dmg:800, team:'blue', target:e, splash:true}); for(let r=0;r<2;r++) particles.push({x:s.x, y:s.y-6, r:4+r*6, alpha:1, grow:2.2, fade:0.06, color:'224,86,253', lw:3, type:'ring'}); } }); } },
     medic:   { name:'MASS HEAL',     icon:'🤍', cost:2, cd:1500, fn:()=>{ troops.filter(t => t.team==='blue' && t.hp>0).forEach(a => { a.hp = Math.min(a.maxHp, a.hp + a.maxHp*0.5); a.hitFlash = 6; }); } },
     drones:  { name:'REINFORCE',     icon:'🪖', cost:2, cd:1300, fn:(u)=>{ u.forEach(d => { for(let s=0;s<2;s++) spawnTroop('blue','drones',d.x,d.y,true); }); } }
 };
@@ -980,6 +986,12 @@ function updateEngine() {
                 particles.push({ x: t.x, y: t.y, r: 6, alpha: 1, grow: 2.2, fade: 0.05, color: '46,204,113', lw: 2, type: 'ring' });
                 t.healTimer = 90;
             }
+        }
+        // MIND CONTROL: a converted troop fights for you, then snaps back to the enemy
+        if(t.convertTimer !== undefined) {
+            t.convertTimer--;
+            if(t.convertTimer % 18 === 0) particles.push({ x: t.x, y: t.y - 4, r: 2, alpha: 1, type: 'spark', color: '224,86,253' });
+            if(t.convertTimer <= 0) { t.team = t.origTeam || 'red'; t.convertTimer = undefined; t.state = 'walk'; t.atkTimer = 0; t.hitFlash = 8; }
         }
 
         if(t.state === 'hooking' && t.hookTarget) {
